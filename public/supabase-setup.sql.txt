@@ -1,0 +1,134 @@
+-- ============================================================
+-- SUPABASE SETUP SQL SCRIPT
+-- CloudVault — Media Storage & QR Code & Gesture Control
+-- ============================================================
+
+-- ============================================================
+-- 1. BUAT TABEL shared_files
+-- Menyimpan URL file yang dikirim melalui gesture mengepal
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS public.shared_files (
+    id BIGSERIAL PRIMARY KEY,
+    file_url TEXT NOT NULL,
+    file_name VARCHAR(500) NOT NULL,
+    file_type VARCHAR(100) NOT NULL DEFAULT 'application/octet-stream',
+    shared_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.shared_files IS 'Menyimpan URL file yang dikirim melalui gesture mengepal';
+COMMENT ON COLUMN public.shared_files.file_url IS 'URL public dari file di Supabase Storage';
+COMMENT ON COLUMN public.shared_files.file_name IS 'Nama asli file';
+COMMENT ON COLUMN public.shared_files.file_type IS 'MIME type file (contoh: image/jpeg, video/mp4)';
+COMMENT ON COLUMN public.shared_files.shared_at IS 'Waktu file dikirim melalui gesture';
+
+-- ============================================================
+-- 2. AKTIFKAN ROW LEVEL SECURITY (RLS)
+-- ============================================================
+
+ALTER TABLE public.shared_files ENABLE ROW LEVEL SECURITY;
+
+-- ============================================================
+-- 3. BUAT POLICY UNTUK AKSES PUBLIC (anon)
+-- ============================================================
+
+CREATE POLICY "Allow public read on shared_files"
+ON public.shared_files FOR SELECT TO anon
+USING (true);
+
+CREATE POLICY "Allow public insert on shared_files"
+ON public.shared_files FOR INSERT TO anon
+WITH CHECK (true);
+
+CREATE POLICY "Allow public update on shared_files"
+ON public.shared_files FOR UPDATE TO anon
+USING (true) WITH CHECK (true);
+
+CREATE POLICY "Allow public delete on shared_files"
+ON public.shared_files FOR DELETE TO anon
+USING (true);
+
+-- ============================================================
+-- 4. INDEX UNTUK PERFORMA
+-- ============================================================
+
+CREATE INDEX IF NOT EXISTS idx_shared_files_shared_at
+ON public.shared_files (shared_at DESC);
+
+-- ============================================================
+-- 5. BUAT STORAGE BUCKET "media-files"
+-- Bucket public dengan limit 50MB per file
+-- Setiap file disimpan dalam folder unik:
+--   media-files/
+--     1234567890_abcdef/
+--       photo.jpg
+--     1234567891_ghijkl/
+--       video.mp4
+-- ============================================================
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+    'media-files',
+    'media-files',
+    true,
+    52428800, -- 50MB
+    ARRAY[
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+        'image/svg+xml', 'image/bmp',
+        'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
+        'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac',
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/zip',
+        'application/x-rar-compressed'
+    ]
+)
+ON CONFLICT (id) DO UPDATE SET
+    public = true,
+    file_size_limit = 52428800;
+
+-- ============================================================
+-- 6. STORAGE POLICIES UNTUK BUCKET "media-files"
+-- ============================================================
+
+CREATE POLICY "Allow public upload to media-files"
+ON storage.objects FOR INSERT TO anon
+WITH CHECK (bucket_id = 'media-files');
+
+CREATE POLICY "Allow public read from media-files"
+ON storage.objects FOR SELECT TO anon
+USING (bucket_id = 'media-files');
+
+CREATE POLICY "Allow public update in media-files"
+ON storage.objects FOR UPDATE TO anon
+USING (bucket_id = 'media-files')
+WITH CHECK (bucket_id = 'media-files');
+
+CREATE POLICY "Allow public delete from media-files"
+ON storage.objects FOR DELETE TO anon
+USING (bucket_id = 'media-files');
+
+-- ============================================================
+-- 7. VERIFIKASI
+-- ============================================================
+
+SELECT table_name, column_name, data_type
+FROM information_schema.columns
+WHERE table_name = 'shared_files' AND table_schema = 'public'
+ORDER BY ordinal_position;
+
+SELECT id, name, public, file_size_limit
+FROM storage.buckets
+WHERE id = 'media-files';
+
+-- ============================================================
+-- SELESAI!
+-- Struktur folder di bucket:
+--   media-files/
+--     [timestamp_random]/        <- folder unik per file
+--       [namafile.ext]           <- file asli
+-- ============================================================

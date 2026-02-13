@@ -98,7 +98,7 @@ export function App() {
                 </div>
               </div>
 
-              {/* Nav pills */}
+              {/* Nav pills + Terima button */}
               <div className="flex items-center gap-2">
                 <div className="flex bg-gray-100/80 rounded-2xl p-1 border border-gray-200/60">
                   <button
@@ -131,6 +131,20 @@ export function App() {
                     )}
                   </button>
                 </div>
+
+                {/* Tombol Terima */}
+                <a
+                  href="https://asmdatabase.vercel.app/Terima.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-md shadow-emerald-200/50 hover:shadow-lg hover:shadow-emerald-200/60 active:scale-95 transition-all duration-300 flex items-center gap-1.5"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="hidden sm:inline">Terima</span>
+                  <span className="sm:hidden">✓</span>
+                </a>
 
                 <div className="hidden md:flex items-center gap-1.5 bg-emerald-50 text-emerald-600 text-[11px] px-3 py-2 rounded-xl border border-emerald-200/60 font-medium">
                   <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
